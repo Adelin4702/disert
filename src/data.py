@@ -119,13 +119,22 @@ def build_loaders(
 
     train_ds = IndexedDataset(train_base)
 
+    # persistent_workers keeps the decode/resize workers alive across epochs
+    # (critical for many short epochs); prefetch_factor buffers batches ahead so
+    # the GPU isn't starved. Both require num_workers > 0.
+    extra = {}
+    if num_workers > 0:
+        extra = {"persistent_workers": True, "prefetch_factor": 4}
+
     train_loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
         num_workers=num_workers, pin_memory=pin_memory,
         worker_init_fn=worker_init_fn, generator=generator, drop_last=False,
+        **extra,
     )
     test_loader = DataLoader(
         test_base, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, pin_memory=pin_memory,
+        **extra,
     )
     return Loaders(train_loader, test_loader, num_classes, len(train_ds))

@@ -21,7 +21,7 @@ from models import build_teacher
 def train_teacher(loaders, device, epochs: int, lr: float, weight_decay: float,
                   checkpoint_path: str, results_path: str, pretrained: bool = True,
                   image_size: int = 160, max_train_batches: int = 0,
-                  max_eval_batches: int = 0):
+                  max_eval_batches: int = 0, log_every: int = 100):
     model = build_teacher(loaders.num_classes, pretrained=pretrained).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -29,6 +29,7 @@ def train_teacher(loaders, device, epochs: int, lr: float, weight_decay: float,
     scaler = GradScaler(enabled=use_amp)
     amp_ctx = (lambda: autocast(device_type=device.type)) if use_amp else nullcontext
 
+    n_batches = len(loaders.train)
     reset_peak_memory(device)
     t0 = time.perf_counter()
     for epoch in range(epochs):
@@ -37,7 +38,7 @@ def train_teacher(loaders, device, epochs: int, lr: float, weight_decay: float,
         for b, (images, labels, _) in enumerate(loaders.train):
             if max_train_batches and b >= max_train_batches:
                 break
-            images = images.to(device, non_blocking=True)
+            images = loaders.train_tf(images.to(device, non_blocking=True))
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             with amp_ctx():
@@ -48,12 +49,15 @@ def train_teacher(loaders, device, epochs: int, lr: float, weight_decay: float,
             scaler.update()
             running += loss.item() * images.size(0)
             seen += images.size(0)
+            if log_every and (b + 1) % log_every == 0:
+                print(f"[teacher] epoch {epoch + 1}/{epochs}  batch {b + 1}/{n_batches}  "
+                      f"loss={running / max(seen, 1):.4f}", flush=True)
         scheduler.step()
-        print(f"[teacher] epoch {epoch + 1}/{epochs}  loss={running / max(seen, 1):.4f}")
+        print(f"[teacher] epoch {epoch + 1}/{epochs}  loss={running / max(seen, 1):.4f}", flush=True)
 
     train_time = time.perf_counter() - t0
     eval_metrics = evaluate(model, loaders.test, device, loaders.num_classes,
-                            max_batches=max_eval_batches)
+                            transform=loaders.eval_tf, max_batches=max_eval_batches)
     eff = efficiency_report(model, device, image_size)
 
     torch.save(model.state_dict(), checkpoint_path)

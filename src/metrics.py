@@ -15,8 +15,8 @@ from device import peak_memory_mb, reset_peak_memory
 
 
 @torch.no_grad()
-def evaluate(model, loader, device, num_classes: int, n_ece_bins: int = 15,
-             max_batches: int = 0):
+def evaluate(model, loader, device, num_classes: int, transform=None,
+             n_ece_bins: int = 15, max_batches: int = 0):
     model.eval()
     reset_peak_memory(device)
 
@@ -26,6 +26,8 @@ def evaluate(model, loader, device, num_classes: int, n_ece_bins: int = 15,
             break
         images, labels = batch[0], batch[1]
         images = images.to(device, non_blocking=True)
+        if transform is not None:
+            images = transform(images)
         logits, _ = model(images)
         probs = F.softmax(logits, dim=1).cpu()
         all_probs.append(probs)

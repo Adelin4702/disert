@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from data import build_loaders
 from device import get_device
-from seed import seed_worker, set_seed
+from seed import set_seed
 from train_student import MethodConfig, train_student
 from train_teacher import load_teacher, train_teacher
 
@@ -65,9 +65,9 @@ def make_loaders(args, device, seed):
     gen = torch.Generator().manual_seed(seed)
     return build_loaders(
         dataset=args.dataset, data_dir=os.path.join(ROOT, "data"),
-        image_size=args.image_size, batch_size=args.batch_size,
+        image_size=args.image_size, batch_size=args.batch_size, device=device,
         num_workers=args.num_workers, pin_memory=(device.type == "cuda"),
-        worker_init_fn=seed_worker, generator=gen, train_subset=args.train_subset,
+        generator=gen, train_subset=args.train_subset,
     )
 
 
@@ -97,7 +97,7 @@ def run(args):
                 weight_decay=args.weight_decay, checkpoint_path=teacher_ckpt,
                 results_path=teacher_results, pretrained=args.pretrained,
                 image_size=args.image_size, max_train_batches=args.max_train_batches,
-                max_eval_batches=args.max_eval_batches,
+                max_eval_batches=args.max_eval_batches, log_every=args.log_every,
             )
             teacher = load_teacher(teacher_ckpt, loaders.num_classes, device)
 
@@ -116,7 +116,7 @@ def run(args):
                 checkpoint_path=ckpt, results_path=res_path, pretrained=args.pretrained,
                 image_size=args.image_size, seed=seed,
                 max_train_batches=args.max_train_batches,
-                max_eval_batches=args.max_eval_batches,
+                max_eval_batches=args.max_eval_batches, log_every=args.log_every,
             )
             all_runs.append(res)
 
@@ -261,7 +261,11 @@ def build_argparser():
     p.add_argument("--teacher_epochs", type=int, default=15)
     p.add_argument("--seeds", default="0")
     p.add_argument("--device", default="auto")
-    p.add_argument("--num_workers", type=int, default=2)
+    # 0 is optimal: data is served from a RAM tensor, so there is nothing for
+    # worker processes to parallelize (and none to fork -> no OMP/shm issues).
+    p.add_argument("--num_workers", type=int, default=0)
+    p.add_argument("--log_every", type=int, default=100,
+                   help="print intra-epoch progress every N batches (0 = off)")
     p.add_argument("--student_lr", type=float, default=1e-3)
     p.add_argument("--teacher_lr", type=float, default=5e-4)
     p.add_argument("--weight_decay", type=float, default=1e-4)

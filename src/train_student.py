@@ -74,7 +74,7 @@ def train_student(cfg: MethodConfig, loaders, teacher, device, epochs: int,
                   lr: float, weight_decay: float, checkpoint_path: str,
                   results_path: str, pretrained: bool = True, image_size: int = 160,
                   seed: int = 0, max_train_batches: int = 0,
-                  max_eval_batches: int = 0):
+                  max_eval_batches: int = 0, log_every: int = 100):
     student = build_student(loaders.num_classes, pretrained=pretrained).to(device)
 
     params = list(student.parameters())
@@ -96,6 +96,7 @@ def train_student(cfg: MethodConfig, loaders, teacher, device, epochs: int,
     if teacher is not None:
         teacher.eval()
 
+    n_batches = len(loaders.train)
     reset_peak_memory(device)
     t0 = time.perf_counter()
     for epoch in range(epochs):
@@ -104,7 +105,7 @@ def train_student(cfg: MethodConfig, loaders, teacher, device, epochs: int,
         for b, (images, labels, idx) in enumerate(loaders.train):
             if max_train_batches and b >= max_train_batches:
                 break
-            images = images.to(device, non_blocking=True)
+            images = loaders.train_tf(images.to(device, non_blocking=True))
             labels = labels.to(device, non_blocking=True)
             idx = idx.to(device)
 
@@ -140,13 +141,16 @@ def train_student(cfg: MethodConfig, loaders, teacher, device, epochs: int,
             memory.update(idx, preds, labels, conf)
             running += loss.item() * images.size(0)
             seen += images.size(0)
+            if log_every and (b + 1) % log_every == 0:
+                print(f"[{cfg.name}|seed{seed}] epoch {epoch + 1}/{epochs}  "
+                      f"batch {b + 1}/{n_batches}  loss={running / max(seen, 1):.4f}", flush=True)
 
         scheduler.step()
-        print(f"[{cfg.name}|seed{seed}] epoch {epoch + 1}/{epochs}  loss={running / max(seen, 1):.4f}")
+        print(f"[{cfg.name}|seed{seed}] epoch {epoch + 1}/{epochs}  loss={running / max(seen, 1):.4f}", flush=True)
 
     train_time = time.perf_counter() - t0
     eval_metrics = evaluate(student, loaders.test, device, loaders.num_classes,
-                            max_batches=max_eval_batches)
+                            transform=loaders.eval_tf, max_batches=max_eval_batches)
     eff = efficiency_report(student, device, image_size)
 
     torch.save(student.state_dict(), checkpoint_path)

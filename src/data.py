@@ -57,7 +57,7 @@ def _decode_split(dataset, data_dir, train):
         labels = torch.empty(n, dtype=torch.long)
         for i in range(n):
             img, lab = base[i]
-            arr = np.asarray(img)                        # H,W,3 uint8
+            arr = np.array(img)                          # H,W,3 uint8 (writable copy)
             images[i] = torch.from_numpy(arr).permute(2, 0, 1)
             labels[i] = lab
             if (i + 1) % 10000 == 0:

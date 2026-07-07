@@ -7,6 +7,9 @@ DEST="$HOME/.cache/torch/hub/checkpoints"
 MAX_ATTEMPTS="${1:-300}"
 mkdir -p "$DEST"
 
+# portable file size (Linux: stat -c%s, macOS/BSD: stat -f%z)
+fsize() { stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || echo 0; }
+
 # url  filename
 FILES=(
   "https://download.pytorch.org/models/efficientnet_v2_s-dd5fe13b.pth efficientnet_v2_s-dd5fe13b.pth"
@@ -17,7 +20,7 @@ fetch() {
   local url="$1" out="$2"
   for i in $(seq 1 "$MAX_ATTEMPTS"); do
     # a valid torch checkpoint unzips-check: just ensure non-trivial size + torch.load works later
-    sz=$(stat -f%z "$out" 2>/dev/null || echo 0)
+    sz=$(fsize "$out")
     echo "  [$(basename "$out")] attempt $i: have $((sz/1024/1024)) MB"
     curl -L -C - --connect-timeout 15 --max-time 120 \
          --speed-limit 5000 --speed-time 20 -o "$out" "$url" 2>/dev/null

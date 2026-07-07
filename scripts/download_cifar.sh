@@ -15,14 +15,17 @@ esac
 TGZ="data/${DATASET}.tgz"
 mkdir -p data
 
+# portable file size (Linux: stat -c%s, macOS/BSD: stat -f%z)
+fsize() { stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || echo 0; }
+
 if [ -d "data/${DATASET}/train" ] && [ -d "data/${DATASET}/test" ]; then
   echo "OK: data/${DATASET} already extracted"; exit 0
 fi
 
 i=0
-until [ -f "$TGZ" ] && [ "$(stat -f%z "$TGZ" 2>/dev/null)" -ge "$SIZE" ]; do
+until [ -f "$TGZ" ] && [ "$(fsize "$TGZ")" -ge "$SIZE" ]; do
   i=$((i+1)); [ "$i" -gt 200 ] && { echo "FAILED after $i attempts"; exit 1; }
-  echo "attempt $i: have $(( $(stat -f%z "$TGZ" 2>/dev/null || echo 0)/1024/1024 )) MB, resuming..."
+  echo "attempt $i: have $(( $(fsize "$TGZ")/1024/1024 )) MB, resuming..."
   curl -L -C - --connect-timeout 15 --max-time 180 --speed-limit 3000 --speed-time 30 \
        -o "$TGZ" "$URL" 2>/dev/null
 done

@@ -1,0 +1,6 @@
+torch>=2.2
+torchvision>=0.17
+numpy
+pyyaml
+matplotlib
+thop            # optional: FLOPs/MACs counting (pipeline degrades gracefully if absent)

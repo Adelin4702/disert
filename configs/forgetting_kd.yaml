@@ -1,0 +1,11 @@
+# Reweighting baseline #2: forgetting events only [Toneva et al., 2019].
+# The closest prior signal to ours — isolates whether the full instability
+# score adds anything over forgetting alone.
+name: forgetting_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+weighting: forgetting
+lambda: 1.0
+warmup_epochs: 3
+normalize_weights: true

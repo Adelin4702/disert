@@ -1,0 +1,11 @@
+# Reweighting baseline #1: static difficulty via instantaneous confidence.
+# Protects the contribution — shows the instability signal beats simple
+# (1 - maxprob) weighting.
+name: confidence_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+weighting: confidence
+lambda: 1.0
+warmup_epochs: 0          # confidence needs no history
+normalize_weights: true

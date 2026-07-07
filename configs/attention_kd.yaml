@@ -1,0 +1,7 @@
+name: attention_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+attention_kd: true
+attention_gamma: 1000.0   # normalized attention MSE is tiny; scale it up
+weighting: none

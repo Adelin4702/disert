@@ -1,0 +1,7 @@
+name: feature_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+feature_kd: true
+feature_beta: 100.0   # MSE on raw features is small; scale it up
+weighting: none

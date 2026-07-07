@@ -1,0 +1,5 @@
+name: classic_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+weighting: none

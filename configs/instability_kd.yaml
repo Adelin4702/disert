@@ -1,0 +1,11 @@
+# Proposed method: Student-Instability Guided KD.
+# instability_score = 0.5*flip_rate + 0.3*forget_rate + 0.2*uncertainty
+name: instability_kd
+use_kd: true
+alpha: 0.5
+temperature: 4.0
+weighting: instability
+lambda: 1.0
+warmup_epochs: 3
+normalize_weights: true
+score_weights: [0.5, 0.3, 0.2]

@@ -115,15 +115,24 @@ def measure_latency(model, device, image_size: int, batch_size: int = 1,
 
 
 def measure_flops(model, device, image_size: int):
-    """MACs/FLOPs via thop if available, else None."""
+    """MACs/FLOPs via thop if available, else None.
+
+    Profiles a deep copy: thop attaches `total_ops`/`total_params` buffers to
+    every submodule, which would otherwise leak into the saved checkpoint and
+    break a strict load.
+    """
     try:
+        import copy
+
         from thop import profile
     except Exception:
         return None
-    model.eval()
     x = torch.randn(1, 3, image_size, image_size, device=device)
     try:
-        macs, _ = profile(model, inputs=(x,), verbose=False)
+        m = copy.deepcopy(model)
+        m.eval()
+        macs, _ = profile(m, inputs=(x,), verbose=False)
+        del m
         return float(macs)
     except Exception:
         return None

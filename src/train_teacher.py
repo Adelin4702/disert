@@ -74,7 +74,9 @@ def train_teacher(loaders, device, epochs: int, lr: float, weight_decay: float,
 def load_teacher(checkpoint_path: str, num_classes: int, device) -> nn.Module:
     model = build_teacher(num_classes, pretrained=False).to(device)
     state = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(state)
+    # strict=False tolerates stray thop profiling buffers (total_ops/total_params)
+    # that older checkpoints may contain; real weights all match by name.
+    model.load_state_dict(state, strict=False)
     model.eval()
     for p in model.parameters():
         p.requires_grad_(False)

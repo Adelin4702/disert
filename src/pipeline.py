@@ -281,6 +281,10 @@ def build_argparser():
 
 
 def main():
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
     args = build_argparser().parse_args()
     args.methods = [m.strip() for m in args.methods.split(",") if m.strip()]
     unknown = [m for m in args.methods if m not in METHOD_FILES]
